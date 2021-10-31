@@ -1,0 +1,48 @@
+---
+title: "R Notebook"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(ggplot2)
+library(dplyr)
+```
+
+
+Column
+--------------------------------------
+
+### Row 1.1
+
+```{r}
+knitr::kable(iris)
+```
+
+
+Column
+--------------------------------------
+
+### Row 2.1
+
+```{r}
+iris %>%
+  ggplot(aes(x = Species, y=Sepal.Width, color=Species)) + 
+  geom_boxplot()
+```
+
+
+### Row 2.2
+
+
+```{r}
+iris %>%
+  ggplot(aes(x=Sepal.Width, y= ..density.., color=Species)) +
+  geom_histogram() + 
+  geom_density() +
+  facet_wrap(.~Species)
+```
+

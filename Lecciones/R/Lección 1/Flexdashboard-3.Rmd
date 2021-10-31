@@ -1,0 +1,39 @@
+---
+title: "Página y Tabs"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(ggplot2)
+library(dplyr)
+
+# Para ver los íconos que se pueden poner, se puede buscar en "fontawesome".
+```
+
+<!-- Si se seleccionan datos y luego se presiona SHFT + CTRL + C -->
+<!-- la selección se torna en un comentario (como en HTML) -->
+
+
+# Layout 1 {data-icon=fa-desktop}
+
+##
+### Columna 1.1
+### Columna 1.2
+
+
+##
+### Columna 2.1
+### Columna 2.2
+### Columna 2.3
+
+
+# Layout 2 {data-icon=fa-database}
+
+## {.tabset}
+### Tab 1
+### Tab 2
+### Tab 3

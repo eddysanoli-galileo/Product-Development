@@ -1,0 +1,56 @@
+---
+title: "Untitled"
+output: 
+  flexdashboard::flex_dashboard:
+    storyboard: true
+---
+
+```{r setup, include=FALSE}
+# El primer parámetro luego de "r" arriba (entre llaves), es el nombre del chunk
+library(flexdashboard)
+library(readr)
+library(dplyr)
+library(leaflet)
+library(DT)
+```
+
+
+```{r dataset}
+earthquake = read_csv("data/earthquakedata.csv")
+```
+
+### Data
+
+```{r}
+earthquake %>%
+  filter(yr == 1995) %>%
+  datatable()
+```
+
+<!-- Los tres asteriscos permiten agregar una descripción de lo que se está presentando -->
+<!-- Se puede colocar markdown en las descripción, excepto títulos, para eso se debe usar HTML (h1, h2, etc) -->
+
+ ***
+
+En este dataset podemos ver la data de los terremotos del año 1995
+
+### Terremotos mayores
+
+```{r}
+earthquake %>%
+  filter(yr==1995, mag > 7.5) %>%
+  leaflet() %>%
+  addTiles() %>%
+  addMarkers(lng = ~lon,
+             lat = ~lat,
+             label = ~mag)
+```
+
+
+ ***
+ 
+En el mapa podemos ver que los mayores terremotos sucedieron en los paises de
+
+- Japón
+- Chile
+- Otro
