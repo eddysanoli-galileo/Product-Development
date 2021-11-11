@@ -1,5 +1,5 @@
 ---
-title: "Acedmática Dashboard"
+title: "Academática Dashboard"
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
@@ -11,6 +11,10 @@ library(flexdashboard)
 library(readr)
 library(dplyr)
 library(ggplot2)
+library(lubridate)
+library(wordcloud)
+library(tm)
+library(DT)
 ```
 
 
@@ -26,7 +30,7 @@ metricas =
   stats %>%
   summarise(total_views = sum(viewCount),
             total_likes = sum(likeCount),
-            total_dislikes = sum(dislikesCount),
+            total_dislikes = sum(dislikeCount),
             total_favorite = sum(favoriteCount),
             total_comment = sum(commentCount))
 ```
@@ -57,7 +61,7 @@ valueBox(metricas$total_likes %>% formattable::comma(digits = 0),
 ```{r}
 valueBox(metricas$total_comment %>% formattable::comma(digits = 0),
          icon = "fa-comments",
-         color = 'warnings')
+         color = 'warning')
 ```
 
 ##
@@ -67,12 +71,97 @@ valueBox(metricas$total_comment %>% formattable::comma(digits = 0),
 like_rate = metricas$total_likes / (metricas$total_likes + metricas$total_dislikes)
 like_rate = round(like_rate*100.0)
 
-gauge(10, min=0, max=100, symbol = '%',
+gauge(like_rate, min=0, max=100, symbol = '%',
       gaugeSectors(success = c(80,100),
                    warning = c(40, 79),
                    danger = c(0,39)))
 ```
 
-###
+### Dislike Rate
 
-# Data
+```{r}
+dislike_rate = metricas$total_dislikes / (metricas$total_likes + metricas$total_dislikes)
+dislike_rate = round(dislike_rate*100.0)
+
+gauge(dislike_rate, min=0, max=100, symbol = '%',
+      gaugeSectors(success = c(0,39),
+                   warning = c(40, 79),
+                   danger = c(80, 100)))
+
+```
+
+##
+
+### Videos Totales Subidos por Año y Mes
+
+```{r}
+videos %>%
+  mutate(year = year(ymd_hms(contentDetails.videoPublishedAt)), 
+         month = month(ymd_hms(contentDetails.videoPublishedAt)),
+         year = as.factor(year)) %>%
+  group_by(year, month) %>%
+  summarise(upload_videos = n_distinct(contentDetails.videoId)) %>%
+  ggplot( aes(x = month, y=upload_videos, fill=year)) +
+  geom_col(position="dodge")
+```
+ 
+
+
+# Data {data-icon=fa-database}
+
+## {.tabset}
+
+### WordCloud
+
+```{r}
+# Se utiliza la librería TM para "Text Mining"
+docs = Corpus(VectorSource(metadata$title))
+
+toSpace = content_transformer(function (x, pattern) gsub(pattern, " ", x))
+
+docs = tm_map(docs, toSpace, "-")
+docs = tm_map(docs, toSpace, "\\(")
+docs = tm_map(docs, toSpace, "\\)")
+docs = tm_map(docs, toSpace, "\\|")
+docs = tm_map(docs, content_transformer(tolower))
+docs = tm_map(docs, removeNumbers)
+docs = tm_map(docs, removeWords, stopwords("spanish"))
+docs = tm_map(docs, content_transformer(tolower))
+docs = tm_map(docs, removeNumbers)
+docs = tm_map(docs, removeWords, stopwords("english"))
+docs = tm_map(docs, removeWords, c("video", "problema", "ejemplo",
+                                   "parte", "ejercicio", "ejercicios", 
+                                   "ejemplos"))
+docs = tm_map(docs, removePunctuation)
+docs = tm_map(docs, stripWhitespace)
+dtm = TermDocumentMatrix(docs)
+m = as.matrix(dtm)
+v = sort(rowSums(m), decreasing=TRUE)
+d = data.frame(word = names(v), freq=v)
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words = 100, random.order=TRUE, rot.per=0.1,
+          colors=brewer.pal(8, "Dark2"))
+```
+
+
+### Tabla
+
+```{r}
+stats %>%
+  mutate(has_like = if_else(likeCount > 0, T, F)) %>%
+  filter(has_like) %>%
+  left_join(metadata, by = c("id" = "video_id")) %>% 
+  select(id, title, viewCount) %>% 
+  datatable()
+```
+
+
+
+
+
+
+
+
+
+
