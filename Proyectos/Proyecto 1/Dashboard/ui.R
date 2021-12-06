@@ -1,6 +1,7 @@
 library(shiny)
 library(lubridate)
 library(DT)
+library(plotly)
 
 
 # Define UI
@@ -18,28 +19,94 @@ shinyUI(fluidPage(
                column(12,
                       sidebarLayout(
                         sidebarPanel(
-                          htmlOutput("album_cover"),
-                          dateRangeInput("range_release", 
-                                         "Fecha de Lanzamiento",
-                                         max = today(),
-                                         min = today() - 365,
-                                         start = today() - 7,
-                                         end = today(),
-                                         language = "es",
-                                         weekstart = 1,
-                                         separator = "a",
-                                         format = "dd-mm-yyyy"),
-                          radioButtons("radio_in", "Seleccione Género",
-                                       choices = c("Masculino", "Femenino", "Otro"),
-                                       selected = "Femenino", 
-                                       inline = F),
-                          verbatimTextOutput("debug_out")
+                          uiOutput("album_cover"),
+                          htmlOutput("album_info"),
+                          hr(),
+                          uiOutput("range_release"),
+                          uiOutput("genre_select"),
+                          uiOutput("song_duration"),
+                          selectInput("explicit",
+                                      "Contenido",
+                                      choices = list("Explícito / No Explícito",
+                                                     "Explícito",
+                                                     "No Explícito"),
+                                      selected = "Explícito / No Explícito"),
+                          verbatimTextOutput("debug_out"),
+                          width = 4
                         ),
                         mainPanel(
+                          br(),
                           DT::dataTableOutput("songs_tbl")
                         )
                       ))
-            ))
+            )),
+    
+    tabPanel("Data Exploration",
+             fluidRow(
+               column(3,
+                      br(),
+                      uiOutput("variable_1"),
+                      uiOutput("variable_2"),
+                      uiOutput("variable_3"),
+                      actionButton("save_plot", "Guardar Gráfica"),
+                      verbatimTextOutput("debug_out2")
+                      ),
+               column(9,
+                      plotlyOutput("exploratory_plot"))
+             )),
+    
+    tabPanel("Statistics",
+             fluidRow(
+               column(6,
+                      h3("Top 10 Artistas Más Populares"),
+                      p("Los artistas con las canciones más populares dentro de los datos disponibles (popularidad promedio)"),
+                      plotOutput("most_popular_artist")
+               ),
+               column(6,
+                      h3("Géneros Más Explícitos"),
+                      p("Géneros ordenados por el porcentaje de canciones explícitas que se incluyen dentro de dicho género"),
+                      plotOutput("most_explicit_genre")
+                      )
+             ),
+             fluidRow(
+               column(12,
+                      h3("Artistas Más Bailables"),
+                      p("Artistas ordenados según su valor de 'danceability'"),
+                      plotOutput("most_danceable_artist")
+               )
+             )),
+    
+    tabPanel("Song Finder",
+             fluidRow(
+               column(4,
+                      br(),
+                      div(style = "text-align: justify; text-justify: inter-word",
+                          p("Utiliza los sliders abajo para ajustar las diferentes características que buscas en una canción. 
+                             A la derecha se mostrará la canción que mejor se aproxima a tus preferencias")),
+                      hr(),
+                      h4("Características de Canción"),
+                      uiOutput("slider_dance"),
+                      uiOutput("slider_energy"),
+                      uiOutput("slider_loud"),
+                      uiOutput("slider_speech"),
+                      uiOutput("slider_acoustic"),
+                      uiOutput("slider_instrumental"),
+                      uiOutput("slider_live"),
+                      actionButton("reset_sliders", "Reset")
+               ),
+               column(8,
+                      br(),
+                      h2("Canción Recomendada"),
+                      column(4, 
+                             h3("Album")),
+                      column(8,
+                             h3("Datos Canción"),
+                             verbatimTextOutput("raw_output")),
+                      verbatimTextOutput("debug_out3")
+                      
+                      
+               )
+             ))
   )
   
 ))
