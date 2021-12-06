@@ -76,7 +76,7 @@ shinyUI(fluidPage(
                )
              )),
     
-    tabPanel("Song Finder",
+    tabPanel("Recomendador",
              fluidRow(
                column(4,
                       br(),
@@ -97,12 +97,12 @@ shinyUI(fluidPage(
                column(8,
                       br(),
                       h2("Canción Recomendada"),
+                      br(),
                       column(4, 
-                             h3("Album")),
+                             uiOutput("match_album_cover")),
                       column(8,
-                             h3("Datos Canción"),
-                             verbatimTextOutput("raw_output")),
-                      verbatimTextOutput("debug_out3")
+                             htmlOutput("match_album_info"),
+                             verbatimTextOutput("raw_output"))
                       
                       
                )

@@ -421,6 +421,8 @@ shinyServer(function(input, output, session) {
   # INPUTS
   # ====================================
   
+  # Se configuran todos los sliders con información de la base de datos
+  
   output$slider_dance = renderUI({
     sliderInput("slider_dance", "Danceability",
                 min = min(df$danceability), 
@@ -480,7 +482,7 @@ shinyServer(function(input, output, session) {
   })
   
   # ====================================
-  # OUTPUTS
+  # OBSERVERS
   # ====================================
   
   # Reset de Sliders
@@ -501,14 +503,20 @@ shinyServer(function(input, output, session) {
                       value = (( max(df$liveness) - min(df$liveness) ) / 2) + min(df$liveness) )
   })
   
+  # ====================================
+  # OUTPUTS
+  # ====================================
   
-  # Print de Debug
-  output$debug_out3 = renderPrint({
+  # FUNCIÓN: calcular distancia euclideana entre sliders y data. Se retorna
+  # la data de la canción con la menor distancia o el mejor match.
+  find_match = function() {
     
+    # Se extraen las columnas con sliders de la data
     data = df[, c("danceability", "energy", "loudness", "speechiness", 
-        "acousticness", "instrumentalness", "liveness")]
+                  "acousticness", "instrumentalness", "liveness")]
     
-    prefs = data.frame(
+    # Se crea un dataframe de una fila con los datos de todos los sliders
+    sliders = data.frame(
       danceability = input$slider_dance,
       energy = input$slider_energy,
       loudness = input$slider_loud,
@@ -518,14 +526,68 @@ shinyServer(function(input, output, session) {
       liveness = input$slider_live
     )
     
-    diff = data - slice(prefs, rep(row_number(), nrow(data)))
-    dist = sqrt(rowSums(diff * diff))
+    if (nrow(sliders) != 0){
+      
+      # Pasos:
+      # 1. Se iguala el número de filas de "sliders" con "data"
+      # 2. Se restan los valores de los sliders a toda la data
+      # 3. Se eleva al cuadrado "element-wise"
+      # 4. Se suman las filas (Cada una de las cualidades de canción)
+      # 5. Se obtiene la raíz cuadrada, básicamente obteniendo la distancia euclideana
+      diff = data - slice(sliders, rep(row_number(), nrow(data)))
+      dist = sqrt(rowSums(diff * diff))
+      
+      # Se obtiene el índice de la canción con la menor distancia
+      song_idx = which.min(dist)
+      
+      # Se extrae toda la data del mejor match usando el index anterior
+      return(df[song_idx, ])
+    }
+    else {
+      return(NULL)
+    }
     
-    song_idx = which.min(dist)
+  }
+  
+  # OUTPUT: Actualizar cover de canción recomendada
+  output$match_album_cover = renderUI({
     
-    song_data = df[song_idx, ]
-    song_data$Title
+    match_data = find_match()
+    
+    # Si no se ha seleccionado album:
+    # - Se codifica en base 64 el placeholder
+    # - Se muestra usando una tag "img"
+    if (is.null(match_data)){
+      b64 <- base64enc::dataURI(file="logo_spotify.png", mime="image/png")
+      img(src = b64, width = "90%", style="border-radius: 10%")
+    }
+    # Si se seleccionó un album:
+    # - Se muestra la imagen en la columna "Album_cover_link"
+    else {
+      img(src = match_data$Album_cover_link, width = "90%", style="border-radius: 10%")
+    }
+    
   })
+  
+  # OUTPUT: Actualizar data de canción recomendada
+  output$match_album_info = renderText({
+    
+    match_data = find_match()
+    
+    if (is.null(match_data)){
+      c("", "")
+    }
+    else {
+      c('<a ', paste('href="https://open.spotify.com/track/', match_data$id, sep = "") ,'">
+        <h2>', match_data$Title, '</h4></a>',
+        '<h3 style="line-height:0.7">', match_data$Artist, '</h3>',
+        '<br>',
+        '<h4 style="line-height:0.7">Género: ', tools::toTitleCase(match_data$Genre),'</h4>',
+        '<h4 style="line-height:0.7">Duración: ', floor(match_data$duration_s / 60),' m</h4>')
+    }
+    
+  })
+  
   
   
 })
