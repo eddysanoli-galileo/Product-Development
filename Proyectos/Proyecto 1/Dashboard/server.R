@@ -12,7 +12,7 @@ shinyServer(function(input, output, session) {
   # %%%%%%%%%%%%%%%%%%%%%
   
   # ====================================
-  # Carga inicial de datos
+  # CARGA INICIAL: Datos de spotify
   # ====================================
   
   # Carga de datos
@@ -68,9 +68,52 @@ shinyServer(function(input, output, session) {
   })
   
   # ====================================
-  # OUTPUT: Tabla de datos Spotify
+  # FUNCIONES
   # ====================================
   
+  filter_songs = function(df_in) {
+    
+    input_list = c(input$range_release, input$genre_select, input$song_duration)
+    
+    # Solo se ejecuta si los inputs asociados no son nulos,
+    # De lo contrario se retorna un valor nulo.
+    if (!any(is.null(input_list))){
+      
+      # Aplicación de filtros:
+      # - Género
+      # - Fecha de lanzamiento
+      # - Duración de canción
+      df_out = df_in %>%
+        filter(release_date > input$range_release[1],
+               release_date < input$range_release[2],
+               Genre %in% input$genre_select,
+               duration_s > input$song_duration[1],
+               duration_s < input$song_duration[2])
+      
+      # Filtro de contenido explícito
+      if (input$explicit == "Explícito"){
+        df_out = df_out %>% 
+          filter(explicit == TRUE)
+      } 
+      else if(input$explicit == "No Explícito"){
+        df_out = df_out %>% 
+          filter(explicit == FALSE)
+      }
+      
+      return(df_out)
+      
+    }
+    else {
+      return(NULL)
+    }
+  }
+  
+  
+  # ====================================
+  # OUTPUTS
+  # ====================================
+  
+  # OUTPUT: Tabla de datos de Spotify
   output$songs_tbl = DT::renderDataTable({
     
     # Exclusión de columnas en dataframe
@@ -78,70 +121,35 @@ shinyServer(function(input, output, session) {
                  c("Album_cover_link", "release_date_precision", "id", "mode", 
                    "key", "duration_ms")]
     
-    # Aplicación de filtros:
-    # - Género
-    # - Fecha de lanzamiento
-    # - Duración de canción
-    df_in = df_in %>%
-      filter(release_date > input$range_release[1],
-             release_date < input$range_release[2],
-             Genre %in% input$genre_select,
-             duration_s > input$song_duration[1],
-             duration_s < input$song_duration[2])
+    # Se filtran las canciones de acuerdo a los inputs de usuario
+    df_in = filter_songs(df_in)
     
-    # Filtro de contenido explícito
-    if (input$explicit == "Explícito"){
-      df_in = df_in %>% 
-        filter(explicit == TRUE)
-    } 
-    else if(input$explicit == "No Explícito"){
-      df_in = df_in %>% 
-        filter(explicit == FALSE)
+    # Dataframe con selección de filas individuales
+    # (Solo si las canciones filtradas no son nulas)
+    if (is.null(df_in)){
+      DT::datatable(df, selection = list(mode = "single", target = "row"))
     }
-    
-    # Dataframe con selección de filas individuales 
-    df_out = 
-      df_in %>% DT::datatable(df, selection = list(mode = "single", target = "row"))
-    
-    return(df_out)
+    else {
+      DT::datatable(df_in, selection = list(mode = "single", target = "row"))
+    } 
+      
   })
   
-  # ====================================
-  # OUTPUT: Print para Debugging
-  # ====================================
   
-  output$debug_out = renderPrint({
-    
-    input$songs_tbl_rows_selected
-
-  })
-  
-  # ====================================
-  # OUTPUT: Album Cover
-  # ====================================
-  
+  # OUTPUT: Portada de Álbum
   output$album_cover = renderUI({
     
-    # Filtros de género, fecha de lanzamiento y duración de canción
-    df_filtered = df %>%
-      filter(release_date > input$range_release[1],
-             release_date < input$range_release[2],
-             Genre %in% input$genre_select,
-             duration_s > input$song_duration[1],
-             duration_s < input$song_duration[2])
+    # Se filtran las canciones de acuerdo a los inputs de usuario
+    df_filtered = filter_songs(df)
     
-    # Filtro de contenido explícito
-    if (input$explicit == "Explícito"){
-      df_filtered = df_filtered %>% 
-        filter(explicit == TRUE)
-    } 
-    else if(input$explicit == "No Explícito"){
-      df_filtered = df_filtered %>% 
-        filter(explicit == FALSE)
+    # Se determina si se regresaron resultados filtrados. Si no hubo resultados
+    # el "album_cover" consiste de un data.frame vacío. En el otro caso, se retorna
+    # el URI de la imagen del album.
+    if (is.null(df_filtered)){
+      album_cover = data.frame()
+    } else {
+      album_cover = df_filtered[input$songs_tbl_rows_selected, "Album_cover_link"]
     }
-    
-    # URI para las imágenes de cada album
-    album_cover = df_filtered[input$songs_tbl_rows_selected, "Album_cover_link"]
     
     # Si no se ha seleccionado album:
     # - Se codifica en base 64 el placeholder
@@ -151,43 +159,33 @@ shinyServer(function(input, output, session) {
       img(src = b64, width = "90%", style="border-radius: 10%")
     }
     
-    # Si se seleccionó un album:
-    # - Se muestra la imagen en la columna "Album_cover_link"
+    # Si se seleccionó un album, se muestra la imagen en 
+    # la columna "Album_cover_link" del dataset
     else {
       img(src = album_cover[[1]], width = "90%", style="border-radius: 10%")
     }
     
   })
   
-  # ====================================
-  # OUTPUT: Album Info
-  # ====================================
   
+  # OUTPUT: Información de Álbum
   output$album_info = renderText({
     
-    # Filtros de género, fecha de lanzamiento y duración de canción
-    df_filtered = df %>%
-      filter(release_date > input$range_release[1],
-             release_date < input$range_release[2],
-             Genre %in% input$genre_select,
-             duration_s > input$song_duration[1],
-             duration_s < input$song_duration[2])
+    # Se filtran las canciones de acuerdo a los inputs de usuario
+    df_filtered = filter_songs(df)
     
-    # Filtro de contenido explícito
-    if (input$explicit == "Explícito"){
-      df_filtered = df_filtered %>% 
-        filter(explicit == TRUE)
-    } 
-    else if(input$explicit == "No Explícito"){
-      df_filtered = df_filtered %>% 
-        filter(explicit == FALSE)
+    # Si la data filtrada está vacía: El nombre de la canción consiste de un df vacío
+    # Si la data filtrada es normal: Se extrae toda la info de la canción
+    if (is.null(df_filtered)){
+      song_name = data.frame()
+    } else {
+      song_name = df_filtered[input$songs_tbl_rows_selected, "Title"]
+      artist_name = df_filtered[input$songs_tbl_rows_selected, "Artist"]
+      song_id = df_filtered[input$songs_tbl_rows_selected, "id"]
     }
     
-    song_name = df_filtered[input$songs_tbl_rows_selected, "Title"]
-    artist_name = df_filtered[input$songs_tbl_rows_selected, "Artist"]
-    song_id = df_filtered[input$songs_tbl_rows_selected, "id"]
-    
-    
+    # Si no se ha seleccionado nada se despliegan datos vacíos.
+    # De lo contrario se despliega la información (más un hyperlink) de la canción seleccionada
     if (nrow(song_name) == 0){
       c("", "")
     }
@@ -196,6 +194,14 @@ shinyServer(function(input, output, session) {
         <h4>',song_name[[1]],'</h4></a>',
         '<p style="line-height:0.7">', artist_name[[1]],'</p>')
     }
+    
+  })
+  
+  
+  # Debugging
+  output$debug_out = renderPrint({
+    
+    input$songs_tbl_rows_selected
     
   })
   
@@ -208,7 +214,7 @@ shinyServer(function(input, output, session) {
   # INPUTS
   # ====================================
   
-  # Selección de Primera Variable
+  # INPUT: Selección de Primera Variable
   output$variable_1 = renderUI({
     
     # Extrae las columnas numéricas del dataframe
@@ -223,7 +229,7 @@ shinyServer(function(input, output, session) {
                 selected = numeric_cols[1])
   })
   
-  # Selección de Segunda Variable
+  # INPUT: Selección de Segunda Variable
   output$variable_2 = renderUI({
     
     # Extrae las columnas numéricas del dataframe
@@ -241,26 +247,29 @@ shinyServer(function(input, output, session) {
                 selected = "NONE")
   })
   
-  # Selección de Tercera Variable
+  # INPUT: Selección de Tercera Variable
   output$variable_3 = renderUI({
     
-    if (input$variable_2 != "NONE"){
-      
-      # Extrae las columnas numéricas del dataframe
-      numeric_cols = names(select(df, where(is.numeric)))
-      
-      # Excluye algunas columnas
-      numeric_cols = numeric_cols[!(numeric_cols %in% c("duration_ms", "mode", "key", input$variable_1, input$variable_2))]
-      
-      # Se agrega el elemento "None"
-      numeric_cols = append(numeric_cols, "NONE")
-      
-      selectInput("variable_3", 
-                  "Variable 3", 
-                  choices = numeric_cols,
-                  selected = "NONE")
-    }
     
+    # La tercera text box solo se habilita si se selecciona una segunda variable
+    if (!is.null(input$variable_2)) {
+      if (input$variable_2 != "NONE"){
+        
+        # Extrae las columnas numéricas del dataframe
+        numeric_cols = names(select(df, where(is.numeric)))
+        
+        # Excluye algunas columnas
+        numeric_cols = numeric_cols[!(numeric_cols %in% c("duration_ms", "mode", "key", input$variable_1, input$variable_2))]
+        
+        # Se agrega el elemento "None"
+        numeric_cols = append(numeric_cols, "NONE")
+        
+        selectInput("variable_3", 
+                    "Variable 3", 
+                    choices = numeric_cols,
+                    selected = "NONE")
+      }
+    }
     
   })
   
@@ -268,28 +277,33 @@ shinyServer(function(input, output, session) {
   # OUTPUTS
   # ====================================
   
-  # Debugging
-  output$debug_out2 = renderPrint({
-    
-    fig
-    
-  })
-  
-  
-  # Valor persistente para la figura
+  # REACTIVE: Valor persistente para la figura
   fig = reactiveValues(plot = NULL)
   
-  # Plot
+  # OUTPUT: Plot
   output$exploratory_plot = renderPlotly({
     
-    if (input$variable_2 == "NONE"){
+    # PARTE 1: 1 variable -------------------
+    
+    # Se "traba" al programa aquí, mientras el input 2 carga
+    if (is.null(input$variable_2)) {
+      return(plotly_empty(type = "scatter", mode = "markers"))
+    }
+    
+    
+    # PARTE 2: 2 variables ------------------
+    
+    # Si las variables ya han sido debidamente cargadas, se procede a revisarlas
+    else if (input$variable_2 == "NONE"){
       
+      # Se extrae la data necesaria y se renombran las columnas de forma acorde
       data = df[, input$variable_1]
       colnames(data)[1] = "var1"
       
       # Cálculo de densidad de la variable seleccionada
       densidad = density(data$var1)
       
+      # Se grafica con plotly
       fig$plot = plot_ly(x = ~densidad$x, y = ~densidad$y, 
                         type="scatter", 
                         mode = "lines",
@@ -300,12 +314,45 @@ shinyServer(function(input, output, session) {
                yaxis = list(title = 'Densidad'))
       
     }
+    
+    # Se "traba" al programa aquí, mientras todos los inputs cargan
+    if (is.null(input$variable_3)) {
+      return(fig$plot)
+    }
+    
+    
+    # PARTE 3: 3 variables ------------------
+    
+    # Si existe (o ha existido) la posibilidad de seleccionar tres variables
+    else if (input$variable_2 == "NONE" & input$variable_3 == "NONE"){
+      
+      # Se extrae la data necesaria y se renombran las columnas de forma acorde
+      data = df[, input$variable_1]
+      colnames(data)[1] = "var1"
+      
+      # Cálculo de densidad de la variable seleccionada
+      densidad = density(data$var1)
+      
+      # Se grafica con plotly
+      fig$plot = plot_ly(x = ~densidad$x, y = ~densidad$y, 
+                         type="scatter", 
+                         mode = "lines",
+                         fill = "tozeroy",
+                         height = 600,
+                         width = 800) %>% 
+        layout(xaxis = list(title = input$variable_1), 
+               yaxis = list(title = 'Densidad'))
+      
+    }
+    
     else if (input$variable_2 != "NONE" & input$variable_3 == "NONE"){
       
+      # Se extrae la data necesaria y se renombran las columnas de forma acorde
       data = df[, c(input$variable_1, input$variable_2)]
       colnames(data)[1] = "var1"
       colnames(data)[2] = "var2"
       
+      # Se grafica con plotly
       fig$plot = plot_ly(data = data, x = ~var1, y = ~var2,
                          type="scatter", 
                          mode = "markers",
@@ -316,13 +363,17 @@ shinyServer(function(input, output, session) {
                yaxis = list(title = input$variable_2))
       
     }
-    else {
+    else if (input$variable_2 != "NONE" & input$variable_3 != "NONE") {
+      
+      
+      # Se extrae la data necesaria y se renombran las columnas de forma acorde
       data = df[, c(input$variable_1, input$variable_2, input$variable_3)]
       
       colnames(data)[1] = "var1"
       colnames(data)[2] = "var2"
       colnames(data)[3] = "var3"
       
+      # Se grafica con plotly
       fig$plot = plot_ly(data = data, x = ~var1, y = ~var2, z = ~var3,
                           type="scatter3d", 
                           mode = "markers",
@@ -335,7 +386,6 @@ shinyServer(function(input, output, session) {
           zaxis = list(title = input$variable_3)))
     }
     
-    
   })
   
   
@@ -346,13 +396,20 @@ shinyServer(function(input, output, session) {
   observeEvent(input$save_plot, {
     
     if (!is.null(fig$plot)){
+      
+      # Pasos:
+      # 1. Se muestra un mensaje de "guardando"
+      # 2. Se guarda la imagen
+      # 3. Al finalizar se muestra "guardado exitoso"
+      # 4. Se espera 1 segundo
+      # 5. Se elimina el mensaje
       showModal(modalDialog("Guardando gráfica como 'grafica.png'", footer=NULL))
       orca(fig$plot, file = "grafica.png")
+      showModal(modalDialog("Guardado exitoso!'", footer=NULL))
+      Sys.sleep(1)
       removeModal()
       
     }
-    #shinyalert("Descarga Exitosa!", "Gráfica descargada como 'grafica.png'", type = "info")
-    #shinyalert(title = "You did it!", type = "success")
   })
   
   # %%%%%%%%%%%%%%%%%%%%%
@@ -502,6 +559,8 @@ shinyServer(function(input, output, session) {
     updateSliderInput(session, "slider_live", 
                       value = (( max(df$liveness) - min(df$liveness) ) / 2) + min(df$liveness) )
   })
+  
+  # Parámetros de URL
   
   # ====================================
   # OUTPUTS

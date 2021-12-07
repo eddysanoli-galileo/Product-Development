@@ -48,8 +48,7 @@ shinyUI(fluidPage(
                       uiOutput("variable_1"),
                       uiOutput("variable_2"),
                       uiOutput("variable_3"),
-                      actionButton("save_plot", "Guardar Gráfica"),
-                      verbatimTextOutput("debug_out2")
+                      actionButton("save_plot", "Guardar Gráfica")
                       ),
                column(9,
                       plotlyOutput("exploratory_plot"))
@@ -82,7 +81,8 @@ shinyUI(fluidPage(
                       br(),
                       div(style = "text-align: justify; text-justify: inter-word",
                           p("Utiliza los sliders abajo para ajustar las diferentes características que buscas en una canción. 
-                             A la derecha se mostrará la canción que mejor se aproxima a tus preferencias")),
+                             A la derecha se mostrará la canción que mejor se aproxima a tus preferencias. También se pueden
+                             pasar los nombres de las características como parámetros de URL en caso se desee.")),
                       hr(),
                       h4("Características de Canción"),
                       uiOutput("slider_dance"),
