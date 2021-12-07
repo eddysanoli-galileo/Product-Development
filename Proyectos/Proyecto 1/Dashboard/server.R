@@ -538,6 +538,16 @@ shinyServer(function(input, output, session) {
     )
   })
   
+  # Se hace que carguen inmediatamente los sliders para que los parámetros
+  # de URL que aplique el usuario tomen efecto (Para evitar "lazy loading")
+  outputOptions(output, "slider_dance", suspendWhenHidden = FALSE)
+  outputOptions(output, "slider_energy", suspendWhenHidden = FALSE)
+  outputOptions(output, "slider_loud", suspendWhenHidden = FALSE)
+  outputOptions(output, "slider_speech", suspendWhenHidden = FALSE)
+  outputOptions(output, "slider_acoustic", suspendWhenHidden = FALSE)
+  outputOptions(output, "slider_instrumental", suspendWhenHidden = FALSE)
+  outputOptions(output, "slider_live", suspendWhenHidden = FALSE)
+  
   # ====================================
   # OBSERVERS
   # ====================================
@@ -561,6 +571,45 @@ shinyServer(function(input, output, session) {
   })
   
   # Parámetros de URL
+  # URL de prueba: http://127.0.0.1:3396/?danceability=0.7&liveness=0.11&energy=0.9&loudness=-16&speechiness=0.3&acousticness=0.2&instrumentalness=0.9
+  # (Este URL resultó en la canción 'Spanish Moon' de Little Feat)
+  observe({
+    
+    query = parseQueryString(session$clientData$url_search)
+    
+    # Se extraen los parámetros del URL
+    dance = query[["danceability"]]
+    energy = query[["energy"]]
+    loud = query[["loudness"]]
+    speech = query[["speechiness"]]
+    acoustic = query[["acousticness"]]
+    instrumental = query[["instrumentalness"]]
+    live = query[["liveness"]]
+    
+    # Si algún parámetro de URL no es nulo, se actualiza el slider correspondiente
+    if(!is.null(dance)){
+      updateSliderInput(session, "slider_dance", value = as.numeric(dance))
+    }
+    if(!is.null(energy)){
+      updateSliderInput(session, "slider_energy", value = as.numeric(energy))
+    }
+    if(!is.null(loud)){
+      updateSliderInput(session, "slider_loud", value = as.numeric(loud))
+    }
+    if(!is.null(speech)){
+      updateSliderInput(session, "slider_speech", value = as.numeric(speech))
+    }
+    if(!is.null(acoustic)){
+      updateSliderInput(session, "slider_acoustic", value = as.numeric(acoustic))
+    }
+    if(!is.null(instrumental)){
+      updateSliderInput(session, "slider_instrumental", value = as.numeric(instrumental))
+    }
+    if(!is.null(live)){
+      updateSliderInput(session, "slider_live", value = as.numeric(live))
+    }
+    
+  })
   
   # ====================================
   # OUTPUTS

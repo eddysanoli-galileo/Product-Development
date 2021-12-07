@@ -82,7 +82,8 @@ shinyUI(fluidPage(
                       div(style = "text-align: justify; text-justify: inter-word",
                           p("Utiliza los sliders abajo para ajustar las diferentes características que buscas en una canción. 
                              A la derecha se mostrará la canción que mejor se aproxima a tus preferencias. También se pueden
-                             pasar los nombres de las características como parámetros de URL en caso se desee.")),
+                             pasar los nombres de las características como parámetros de URL en caso se desee (URL de prueba: 
+                             http://127.0.0.1:3396/?danceability=0.7)")),
                       hr(),
                       h4("Características de Canción"),
                       uiOutput("slider_dance"),
