@@ -85,6 +85,4 @@ shinyServer(function(input, output, session) {
     hist(sample_dist())
   })
   
-  
-  
 })
