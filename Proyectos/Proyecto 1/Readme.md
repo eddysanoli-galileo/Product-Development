@@ -8,7 +8,7 @@ El dataset utilizado contiene el género, título, artista, duración, caracter�
 
 ## Estructura
 
-El dashboard creado está dividido en 4 pestañas: *Raw Data*, *Data Exploration*, *Statistics* y *Recomendador*. El mismo puede ser accesado en su forma en línea desde [shinyapps.io](eddysanoli.shinyapps.io/dashboard/) (**IMPORTANTE**: El botón de descarga de gráficos no funciona en el deployment en línea. Causa un crash).
+El dashboard creado está dividido en 4 pestañas: *Raw Data*, *Data Exploration*, *Statistics* y *Recomendador*. El mismo puede ser accesado en su forma en línea desde [shinyapps.io](https://eddysanoli.shinyapps.io/dashboard/) (**IMPORTANTE**: El botón de descarga de gráficos no funciona en el deployment en línea. Causa un crash).
 
 ![pestañas](./Media/tabs.PNG)
 
