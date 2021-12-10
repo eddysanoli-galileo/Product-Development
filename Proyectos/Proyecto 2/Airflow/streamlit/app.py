@@ -1,8 +1,9 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
+from sqlalchemy import create_engine
 
-st.title('Amo a mi amorcito ❤️')
+st.title('COVID-19 Dashboard')
 
 """
 ## Potencialidades
@@ -17,6 +18,16 @@ st.title('Amo a mi amorcito ❤️')
 - La mejor confidente
 - Es un pato 🦆
 """
+
+# engine = create_engine('mysql+mysqlconnector://[user]:[pass]@[host]:[port]/[schema]', echo=False)
+engine = create_engine('mysql+mysqlconnector://test:test123@db:3306/test')
+
+sql_df = pd.read_sql(
+    "SELECT * FROM covid_data",
+    con = engine
+)
+
+st.write(sql_df)
 
 x = 4
 st.write(x, " square is ", x*x)
