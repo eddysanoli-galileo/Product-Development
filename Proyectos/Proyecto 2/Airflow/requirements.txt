@@ -1,3 +1,7 @@
 pandas
 structlog
 numpy
+scikit-learn
+streamlit
+black
+altair

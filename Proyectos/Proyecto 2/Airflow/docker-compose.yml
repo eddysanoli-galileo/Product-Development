@@ -50,3 +50,13 @@ services:
             MYSQL_DATABASE: test
             MYSQL_USER: test
             MYSQL_PASSWORD: test123
+    
+    streamlit:
+        build:
+            context: ./
+            dockerfile: Dockerfile_streamlit
+        command: "streamlit run ./streamlit/app.py"
+        ports:
+            - "8501:8501"
+        volumes:
+            - "./streamlit:/usr/src/app/streamlit"
