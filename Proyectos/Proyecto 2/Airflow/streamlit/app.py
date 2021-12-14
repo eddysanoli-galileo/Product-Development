@@ -2,58 +2,84 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from sqlalchemy import create_engine
+from streamlit_folium import folium_static
+from functions import process_folium_map_data
+import datetime
+
+# Layout ancho (Similar a una página web tradicional)
+st.set_page_config(layout="wide")
+
+# ================
+# TITULO
+# ================
 
 st.title('COVID-19 Dashboard')
 
-"""
-## Potencialidades
+# ================
+# DATASET
+# ================
 
-- Es hermosa
-- Es perfecta
-- Canta precioso
-- Da los mejores abrazos, besos, consejos y apapachos
-- Wifey 100%
-- Corazón enorme y de oro
-- La mejor amiga
-- La mejor confidente
-- Es un pato 🦆
-"""
+try: 
+    # Conexión con base de datos
+    # Argumento: 'mysql+mysqlconnector://[user]:[pass]@[host]:[port]/[schema]'
+    engine = create_engine('mysql+mysqlconnector://test:test123@db:3306/test')
 
-# engine = create_engine('mysql+mysqlconnector://[user]:[pass]@[host]:[port]/[schema]', echo=False)
-engine = create_engine('mysql+mysqlconnector://test:test123@db:3306/test')
+    # Se extrae todo el dataset
+    dataset = pd.read_sql(
+        "SELECT * FROM covid_data",
+        con = engine
+    )
 
-sql_df = pd.read_sql(
-    "SELECT * FROM covid_data",
-    con = engine
+except Exception as e:
+    st.write("Database not yet available.")
+    st.image("streamlit/map.PNG")
+
+# ===============
+# SIDE BAR
+# ===============
+
+st.sidebar.markdown("""
+# Options
+## Map Date
+""")
+
+analysis_date = st.sidebar.date_input(
+    'Date for COVID data', 
+    value = dataset['date'].max(),
+    min_value = dataset['date'].min(),
+    max_value = dataset['date'].max()
 )
 
-st.write(sql_df)
+st.sidebar.markdown(f"""
+##### Dataset date range: { dataset['date'].min().date().strftime('%m/%d/%Y') } - { dataset['date'].max().date().strftime('%m/%d/%Y') }
+""")
 
-x = 4
-st.write(x, " square is ", x*x)
+# ================
+# FOLIUM MAP
+# ================
 
-# Sintáxis equivalente pero menos ordenada
-x = 4
-x, "square is ", x*x
+# Solo se renderiza el mapa si el dataset no está vacío
+if not dataset.empty:
+    #with st.spinner("Loading Map..."):
+    #   map = process_folium_map_data(dataset, analysis_date)
+    #   folium_static(map, width = 1420, height = 580)
+    st.image("streamlit/map.PNG")
 
-# Dataframes
-st.write("This is a DataFrame exampe")
-st.write(pd.DataFrame({
-    'Column A': ["A", "B", "C", "D"],
-    "Column B": [1, 2, 3, 4]
-}))
+# ================
+# CONTENT
+# ================
 
-"""
-# Title: This is a Title Tag
-This is another example for data frames
-"""
+st.title("Global Situation")
 
-# Dataframes
-st.write("This is a DataFrame exampe")
-st.write(pd.DataFrame({
-    'Column A': ["A", "B", "C", "D"],
-    "Column B": [1, 2, 3, 4]
-}))
+with st.container():
+    col1, col2 = st.columns([4, 1])
+    col1.bar_chart(dataset[["confirmed", "date"]])
+    col2.write("Controles")
+
+with st.container():
+    col1, col2 = st.columns([4, 1])
+    col1.bar_chart(np.random.randn(50, 3))
+    col2.write("Controles")
 
 """
 ## Show me some graphs
@@ -117,18 +143,5 @@ progress_bar = st.progress(0)
 
 # Se ejecuta luego de haber finalizado la barra de progreso de arriba
 "The wait is done"
-
-# ===============
-# SIDE BAR
-# ===============
-
-st.sidebar.write("This is a sidebar")
-option_side = st.sidebar.selectbox("Select a Side Number", option_list)
-st.sidebar.write("The selection is: ", option_side)
-
-st.sidebar.write("Another slider")
-another_slider = st.sidebar.slider("Select Range", min_value=0.0, max_value=100.0, value=(25.0, 75.0))
-
-st.sidebar.write("The range selected is: ", another_slider)
 
 

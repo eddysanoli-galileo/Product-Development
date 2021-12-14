@@ -7,3 +7,5 @@ black
 altair
 sqlalchemy
 mysql-connector-python
+folium
+streamlit-folium

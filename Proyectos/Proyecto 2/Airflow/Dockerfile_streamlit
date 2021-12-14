@@ -8,4 +8,22 @@ COPY requirements.txt ./
 
 RUN pip install -r requirements.txt
 
+# We change the max size of static elements that can be displayed by Streamlit
+# 1. We go to the streamlit server files
+# 2. We change MESSAGE_SIZE_LIMIT to 70 * int(1e6) (A 70MB file) on line 28 of server_util.py
+#   - sed -i: 
+#       Open and change the file
+#   - "s": 
+#       Search and replace
+#   - "/MESSAGE_SIZE_LIMIT = 50/MESSAGE_SIZE_LIMIT = 70": 
+#       Substitutes ocurrences of the first pattern with the second parameter
+#   - "/g": 
+#       Process all ocurrences of the pattern found
+#   - server_util.py: 
+#       File to process
+WORKDIR /usr/local/lib/python3.7/site-packages/streamlit/server
+RUN sed -i "s/MESSAGE_SIZE_LIMIT = 50/MESSAGE_SIZE_LIMIT = 70/g" server_util.py
+
+# Copy the contents of the local streamlit directory
+WORKDIR /usr/src/app
 COPY ./streamlit /usr/src/app/streamlit

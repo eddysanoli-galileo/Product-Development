@@ -20,6 +20,8 @@ services:
             - LOAD_EX=n
             - EXECUTOR=Local
             - AIRFLOW__CORE__FERNET_KEY=ZmDfcTF7_60GrrY167zsiPd67pEvs0aGOv2oasOM1Pg=
+            - AIRFLOW_CONN_MYSQL_DEFAULT=mysql://test:test123@db:3306/test
+            - AIRFLOW_CONN_FS_DEFAULT=file://:@:/?path=%2Fhome%2Fairflow%2Fmonitor
         logging:
             options:
                 max-size: 10m
@@ -55,8 +57,13 @@ services:
         build:
             context: ./
             dockerfile: Dockerfile_streamlit
+        image: streamlit
         command: "streamlit run ./streamlit/app.py"
         ports:
             - "8501:8501"
         volumes:
             - "./streamlit:/usr/src/app/streamlit"
+        depends_on:
+            - db
+            - webserver
+            - postgres

@@ -23,6 +23,7 @@ dag = DAG('load_data', description = "DAG for loading new COVID-19 data to the d
               'max_active_runs': 1,
               'start_date': days_ago(2)
           },
+          is_paused_upon_creation=False,
           schedule_interval = "0 1 * * *",
           catchup = False)
 
