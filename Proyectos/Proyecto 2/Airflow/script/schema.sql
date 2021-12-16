@@ -9,3 +9,11 @@ CREATE TABLE test.covid_data(
     deaths int,
     recovered int
 );
+
+CREATE TABLE test.country_data(
+    id int primary key auto_increment,
+    code varchar(64),
+    name varchar(256),
+    continent varchar(256),
+    population int
+);

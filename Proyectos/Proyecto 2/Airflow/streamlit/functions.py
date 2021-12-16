@@ -4,6 +4,30 @@ import json
 import branca
 import pandas as pd
 import streamlit as st
+from sqlalchemy import create_engine
+
+# ===============================
+# OBTENER DATOS DE BASE DE DATOS COMO DATAFRAME
+# ===============================
+
+@st.cache(suppress_st_warning = True)
+def get_DBData():
+
+    # Conexión con base de datos
+    # Argumento: 'mysql+mysqlconnector://[user]:[pass]@[host]:[port]/[schema]'
+    engine = create_engine('mysql+mysqlconnector://test:test123@db:3306/test')
+
+    # Se extrae todo el dataset
+    dataset = pd.read_sql(
+        """
+        SELECT covd.*, coud.continent, coud.population
+        FROM covid_data covd
+        LEFT JOIN country_data coud ON coud.name = covd.country_region
+        """,
+        con = engine
+    )
+
+    return dataset
 
 # ===============================
 # LINK CAPA Y ELEMENTO FOLIUM
