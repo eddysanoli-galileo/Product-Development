@@ -77,7 +77,7 @@ st.sidebar.markdown(f"""
 ------
 """)
 
-map_type = st.sidebar.selectbox('Map Type', ('Confirmed Cases by Country', 'Deaths by Country', 'Recovered by Country', 'Data by Region'))
+map_type = st.sidebar.selectbox('Map Type', ('Data by Region', 'Confirmed Cases by Country', 'Deaths by Country', 'Recovered Cases by Country'))
 
 st.sidebar.markdown("""
 <ul>
@@ -105,6 +105,8 @@ st.sidebar.markdown("##### Enable expander with raw data")
 
 # TODO: Mapa animado - https://www.google.com/search?client=opera&q=create+timestamped+geoJSON&sourceid=opera&ie=UTF-8&oe=UTF-8
 
+maps = process_folium_map_data(dataset, analysis_date)
+
 # Pestaña expandible para ver el datset raw
 if view_raw_dataset == True:
     with st.expander("Raw Dataset"):
@@ -112,9 +114,21 @@ if view_raw_dataset == True:
 
 # Solo se renderiza el mapa si el usuario lo desea
 if disable_map == False:
+
+    # Se utiliza el mapa elegido por el usuario
+    if map_type == "Data by Region":
+        map = maps["bubbles"]
+    elif map_type == "Confirmed Cases by Country":
+        map = maps["confirmed"]
+    elif map_type == "Deaths by Country":
+        map = maps["deaths"]
+    elif map_type == "Recovered Cases by Country":
+        map = maps["recovered"]
+
+    # Se renderiza el mapa
     with st.spinner("Loading Map..."):
-        map = process_folium_map_data(dataset, analysis_date)
         folium_static(map, width = 1420, height = 580)
+        
 else:
     st.image("streamlit/map.PNG")
 

@@ -1,5 +1,6 @@
 import numpy as np
 import folium
+from folium import plugins
 import json
 import branca
 import pandas as pd
@@ -243,22 +244,16 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
     # Folium Map
     # --------------
 
-    # Creación de mapa base
-    map = folium.Map(
-        location=[0, 0],            # Mapa inicia centrado
-        zoom_start = 2,             # Mapa inicia con tres scrolls de zoom
-        min_zoom = 2,               # No se puede hacer zoom-out por arriba del valor inicial
-        control_scale = True,       # Controles para hacer zoom activados
-        max_bounds = True,          # No se puede hacer scroll fuera de los límites
-        min_lat = -60)              # No se puede bajar para ver la antartida
-
-    # Bins: Valores límites para agrupar el número de casos
-    # Se convierten a float para que el mapa choropleth lo tome correctament
-    choropleth_bins = [0, 50, 500, 50000, 500000, 5000000, max(unGroupedData["confirmed"])]
-    choropleth_bins = [float(x) for x in choropleth_bins]
-
     # ======================
     # Confirmed: Choropleth
+
+    map_confirmed = folium.Map(
+        location=[0, 0], 
+        zoom_start = 2, 
+        min_zoom = 2,
+        control_scale = True,
+        max_bounds = True,
+        min_lat = -60)
 
     # Se convierten a float los bins en los que se va a dividir el número de casos
     confirmed_bins = [0, 50, 500, 50000, 500000, 5000000, max(unGroupedData["confirmed"])]
@@ -276,8 +271,7 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
         line_opacity = 0.5,
         legend_name = "Confirmed Cases",
         highlight = True, 
-        bins = confirmed_bins,
-        show = False
+        bins = confirmed_bins
     )
 
     # Se elimina la leyenda creada por defecto por choropleth
@@ -286,17 +280,34 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
             del(choropleth_confirmed._children[key])
 
     # Se agrega el choropleth luego de eliminar la leyenda
-    choropleth_confirmed.add_to(map)
+    choropleth_confirmed.add_to(map_confirmed)
 
     # Colormap logarítmico para confirmados
     bins_log = np.log(np.array(confirmed_bins) + 1)
     colormap_confirmed = branca.colormap.linear.BuPu_08.scale(0, 500)
     colormap_confirmed = colormap_confirmed.to_step(index = bins_log)
     colormap_confirmed.caption = 'Log(Confirmed)'
-    colormap_confirmed.add_to(map)
+    colormap_confirmed.add_to(map_confirmed)
+
+    # Popup con el nombre del país y el número de confirmados
+    folium.features.GeoJsonPopup(fields = ["Country", "Confirmed"]).add_to(choropleth_confirmed.geojson)
+
+    # Adición de mini-mapa
+    map_confirmed.add_child(plugins.MiniMap(toggle_display=True))
+
+    # Link entre la escala de color logarítimica y el mapa
+    map_confirmed.add_child(BindColormap(choropleth_confirmed, colormap_confirmed))
 
     # ===================
     # Muertes: Choropleth
+
+    map_deaths = folium.Map(
+        location=[0, 0], 
+        zoom_start = 2, 
+        min_zoom = 2,
+        control_scale = True,
+        max_bounds = True,
+        min_lat = -60)
 
     # Se convierten a float los bins en los que se va a dividir el número de casos
     death_bins = [0, 50, 500, 50000, 500000, max(unGroupedData["deaths"])]
@@ -314,8 +325,7 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
         line_opacity = 0.5,
         legend_name = "Deaths",
         highlight = True, 
-        bins = death_bins,
-        show = False
+        bins = death_bins
     )
 
     # Se elimina la leyenda creada por defecto por choropleth
@@ -324,17 +334,34 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
             del(choropleth_deaths._children[key])
 
     # Se agrega el choropleth luego de eliminar la leyenda
-    choropleth_deaths.add_to(map)
+    choropleth_deaths.add_to(map_deaths)
 
     # Colormap logarítmico de muertes
     bins_log = np.log(np.array(death_bins) + 1)
     colormap_deaths = branca.colormap.linear.YlOrRd_09.scale(0, 500)
     colormap_deaths = colormap_deaths.to_step(index = bins_log)
     colormap_deaths.caption = 'Log(Deaths)'
-    colormap_deaths.add_to(map)
+    colormap_deaths.add_to(map_deaths)
+
+    # Popup con el nombre del país y el número de confirmados
+    folium.features.GeoJsonPopup(fields = ["Country", "Deaths"]).add_to(choropleth_deaths.geojson)
+
+    # Adición de mini-mapa
+    map_deaths.add_child(plugins.MiniMap(toggle_display=True))
+
+    # Link entre la escala de color logarítimica y el mapa
+    map_deaths.add_child(BindColormap(choropleth_deaths, colormap_deaths))
 
     # ===================
     # Recuperados: Choropleth
+
+    map_recovered = folium.Map(
+        location=[0, 0], 
+        zoom_start = 2, 
+        min_zoom = 2,
+        control_scale = True,
+        max_bounds = True,
+        min_lat = -60)
 
     # Se convierten a float los bins en los que se va a dividir el número de casos
     recovered_bins = [0, 50, 500, 50000, 500000, 5000000, max(unGroupedData["recovered"])]
@@ -361,16 +388,34 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
             del(choropleth_recovered._children[key])
 
     # Se agrega el choropleth luego de eliminar la leyenda
-    choropleth_recovered.add_to(map)
+    choropleth_recovered.add_to(map_recovered)
 
     # Colormap logarítmico de recuperados
     bins_log = np.log(np.array(recovered_bins) + 1)
     colormap_recovered = branca.colormap.linear.Greens_08.scale(0, 500)
     colormap_recovered = colormap_recovered.to_step(index = bins_log)
     colormap_recovered.caption = 'Log(Recovered)'
-    colormap_recovered.add_to(map)
+    colormap_recovered.add_to(map_recovered)
+
+    # Popup con el nombre del país y el número de confirmados
+    folium.features.GeoJsonPopup(fields = ["Country", "Recovered"]).add_to(choropleth_recovered.geojson)
+
+    # Adición de mini-mapa
+    map_recovered.add_child(plugins.MiniMap(toggle_display=True))
+
+    # Link entre la escala de color logarítimica y el mapa
+    map_recovered.add_child(BindColormap(choropleth_recovered, colormap_recovered))
 
     # ===================
+    # Data por Región: Burbujas
+
+    map_bubbles = folium.Map(
+        location=[0, 0], 
+        zoom_start = 2, 
+        min_zoom = 2,
+        control_scale = True,
+        max_bounds = True,
+        min_lat = -60)
 
     # Se crea una capa para todos los marcadores circulares
     feature_group = folium.FeatureGroup(name = "Cases by Region")
@@ -400,32 +445,23 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
         axis = 1)
 
     # Se agregan todos los puntos al mapa como una capa
-    feature_group.add_to(map)
+    feature_group.add_to(map_bubbles)
 
     # Mantener al frente las burbujitas siempre
-    map.keep_in_front(feature_group)
-
-    # Popup para cada choroplath
-    folium.features.GeoJsonPopup(fields = ["Country", "Confirmed"]).add_to(choropleth_confirmed.geojson)
-    folium.features.GeoJsonPopup(fields = ["Country", "Deaths"]).add_to(choropleth_deaths.geojson)
-    folium.features.GeoJsonPopup(fields = ["Country", "Recovered"]).add_to(choropleth_recovered.geojson)
-
-    # Control de capa para apagar o encender el mapa de choropleth
-    folium.LayerControl().add_to(map)
+    map_bubbles.keep_in_front(feature_group)
 
     # Adición de mini-mapa
-    from folium import plugins
     minimap = plugins.MiniMap(toggle_display=True)
-    map.add_child(minimap)
+    map_bubbles.add_child(minimap)
 
-    # Se crea un link entre cada colorbar y el choropleth
-    map.add_child(BindColormap(choropleth_confirmed, colormap_confirmed))
-    map.add_child(BindColormap(choropleth_deaths, colormap_deaths))
-    map.add_child(BindColormap(choropleth_recovered, colormap_recovered))
-
-    # Nota: El mapa generado es bastante grande
+    # Nota: El mapa generado es bastante grande por la resolución de la geometría en el GeoJson
     # Dependiendo del tamaño se deberán modificar los límites de tamaño de elementos estáticos
     # de streamlit en el dockerfile correspondiente de acuerdo a lo dicho en el siguiente foro: 
     # https://discuss.streamlit.io/t/runtimeerror-data-of-size-107-9mb-exceeds-write-limit-of-50-0mb/6970/13
 
-    return (map)
+    return ({
+        "confirmed": map_confirmed,
+        "deaths": map_deaths,
+        "recovered": map_recovered,
+        "bubbles": map_bubbles
+    })
