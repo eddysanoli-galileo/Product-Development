@@ -20,7 +20,7 @@ def get_DBData():
     # Se extrae todo el dataset
     dataset = pd.read_sql(
         """
-        SELECT covd.*, coud.continent, coud.population
+        SELECT covd.*, coud.continent, coud.population, coud.code
         FROM covid_data covd
         LEFT JOIN country_data coud ON coud.name = covd.country_region
         """,
@@ -83,6 +83,11 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
         ser presentados utilizando "folium_static()".
     """
 
+    # Se eliminan columnas innecesarias
+    dataset = dataset[["country_region", "province_state", "date", "confirmed", "deaths", "recovered", "lat", "lon"]]
+    
+    # Se convierte la fecha de datetime a string
+    sel_date = sel_date.strftime('%Y-%m-%d')
 
     # Algunos nombres que aparecen como paises en el archivo GeoJson descargado
     # aparecen como "Estado/Provincia" en el dataset principal. Aquí se hace el mapeo,
@@ -109,10 +114,17 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
 
     # Group por país y fecha
     GroupedData = (dataset[dataset["date"] == sel_date]
-            .groupby(by = "country_region")
-            .sum()
-            .reset_index()
-    ) 
+                    .groupby(by = "country_region")
+                    .max()
+                    .reset_index())
+
+    # Se corrige el número de de recuperados hasta la fecha 
+    data_till_sel_date = dataset[dataset["date"] < sel_date]
+    GroupedData["recovered"] = (data_till_sel_date[["country_region", "recovered"]]
+                                    .groupby(by = ["country_region"], dropna=False)
+                                    .max()
+                                    .fillna(0)
+                                    .reset_index())["recovered"]
 
     # Algunos paises en el GeoJson están escritos diferente con respecto
     # a los datos del dataset. Aquí se hace el mapeo para que ambos nombres
@@ -147,7 +159,14 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
     # --------------
 
     # Extracción de datos de día específico
-    unGroupedData = (dataset[dataset["date"] == sel_date]) 
+    unGroupedData = dataset[dataset["date"] == sel_date].reset_index() 
+
+    # Se corrige el número de de recuperados hasta la fecha 
+    unGroupedData["recovered"]= (data_till_sel_date[["country_region", "province_state", "recovered"]]
+                                    .groupby(by = ["country_region", "province_state"], dropna=False)
+                                    .max()
+                                    .fillna(0)
+                                    .reset_index())["recovered"]
 
     # Creación de columna de País + Estado. 
     # Valores iniciales: Nombres de país
@@ -175,6 +194,7 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
     #   2. Para que las posiciones inicien en 1, se le suma 1
     #   3. Se dividen todas las posiciones dentro del número máximo de grupos para obtener un número 
     #      entre 0 y 1.
+
     unGroupedData["marker_size"] = (pd.qcut(unGroupedData['confirmed'], q = size_groups, labels = False) + 1) / size_groups
 
     # --------------
