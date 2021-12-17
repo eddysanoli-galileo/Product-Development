@@ -96,8 +96,8 @@ st.sidebar.markdown("""
 disable_map = st.sidebar.checkbox("Disable Map", value = True)
 st.sidebar.markdown("##### Note: Enable for faster performance")
 
-view_raw_dataset = st.sidebar.checkbox("View Raw Dataset", value = False)
-st.sidebar.markdown("##### Enable expander with raw data")
+view_raw_dataset = st.sidebar.checkbox("View Raw Map Data", value = False)
+st.sidebar.markdown("##### Enable expander with raw map data")
 
 # ================
 # FOLIUM MAP
@@ -105,15 +105,10 @@ st.sidebar.markdown("##### Enable expander with raw data")
 
 # TODO: Mapa animado - https://www.google.com/search?client=opera&q=create+timestamped+geoJSON&sourceid=opera&ie=UTF-8&oe=UTF-8
 
-maps = process_folium_map_data(dataset, analysis_date)
-
-# Pestaña expandible para ver el datset raw
-if view_raw_dataset == True:
-    with st.expander("Raw Dataset"):
-        st.write(dataset)
-
 # Solo se renderiza el mapa si el usuario lo desea
 if disable_map == False:
+
+    maps = process_folium_map_data(dataset, analysis_date)
 
     # Se utiliza el mapa elegido por el usuario
     if map_type == "Data by Region":
@@ -128,9 +123,14 @@ if disable_map == False:
     # Se renderiza el mapa
     with st.spinner("Loading Map..."):
         folium_static(map, width = 1420, height = 580)
-        
+
 else:
     st.image("streamlit/map.PNG")
+
+# Pestaña expandible para ver el datset raw
+if view_raw_dataset == True:
+    with st.expander("Raw Map Data"):
+        st.write(dataset[dataset["date"] == analysis_date.strftime('%Y-%m-%d')].reset_index())
 
 # ================
 # CONTENT

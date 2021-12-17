@@ -24,6 +24,10 @@ RUN pip install -r requirements.txt
 WORKDIR /usr/local/lib/python3.7/site-packages/streamlit/server
 RUN sed -i "s/MESSAGE_SIZE_LIMIT = 50/MESSAGE_SIZE_LIMIT = 70/g" server_util.py
 
+# Copy the "config.toml" file to a new folder called ".streamlit"
+RUN mkdir -p ~/.streamlit
+COPY streamlit/config.toml /root/.streamlit/
+
 # Copy the contents of the local streamlit directory
 WORKDIR /usr/src/app
 COPY ./streamlit /usr/src/app/streamlit

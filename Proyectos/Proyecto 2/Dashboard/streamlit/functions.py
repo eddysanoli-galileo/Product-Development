@@ -63,6 +63,46 @@ class BindColormap(MacroElement):
         {% endmacro %}
         """)  # noqa
 
+
+# ===============================
+# GENERAR BINS O NIVELES DE COLOR PARA MAPA
+# ===============================
+
+def generate_bins(max_value):
+    """
+    Genera una escala logarítmica para separar los valores alimentados a un choropleth map
+    en diferentes categorías o niveles, en otras palabras, para que regiones con un mayor
+    valor tengan una intensidad de color más alta.
+
+    Args:
+        max_value (int): Valor máximo de la métrica a medir, por ejemplo, valor máximo de
+        casos confirmados de COVID-19.
+    """
+
+    bin_count = 0
+    bin_value = 0
+    bins = []
+
+    while bin_value < max_value:
+        
+        bin_count += 1
+        bins.append(bin_value)
+        bin_value = 1 * 10**(bin_count)
+
+    bins[len(bins)-1] = max_value
+
+    # El número mínimo de bins requerido en un choropleth map es de 3. 
+    # Si los "extremos" de bins generados son menores a 4 (3 regiones
+    # intermedias) se genera un grupo de extremos por defecto.
+    if len(bins) < 4:
+        bins = [0, 10, 100, 1000]
+
+    # Se convierten los numeros a floats
+    bins = [float(x) for x in bins]
+
+    return(bins)
+
+
 # ===============================
 # PROCESAR DATOS PARA MAPA
 # ===============================
@@ -196,14 +236,17 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
     #   3. Se dividen todas las posiciones dentro del número máximo de grupos para obtener un número 
     #      entre 0 y 1.
 
-    unGroupedData["marker_size"] = (pd.qcut(unGroupedData['confirmed'], q = size_groups, labels = False) + 1) / size_groups
+    try: 
+        unGroupedData["marker_size"] = (pd.qcut(unGroupedData['confirmed'], q = size_groups, labels = False) + 1) / size_groups
+    except:
+        unGroupedData["marker_size"] = 0.5
 
     # --------------
     # Edición GeoJson
     # --------------
 
     # Carga de datos de GeoJson
-    with open("./streamlit/countries.geojson") as f:
+    with open("./streamlit/countries-min.json") as f:
         geojson_countries = json.load(f)
 
     # Se le agregan propiedades al JSON
@@ -255,9 +298,8 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
         max_bounds = True,
         min_lat = -60)
 
-    # Se convierten a float los bins en los que se va a dividir el número de casos
-    confirmed_bins = [0, 50, 500, 50000, 500000, 5000000, max(unGroupedData["confirmed"])]
-    confirmed_bins = [float(x) for x in confirmed_bins]
+    # Se generan los bins en los que se va a dividir el número de casos
+    confirmed_bins = generate_bins(max(unGroupedData["confirmed"]))
 
     # Creación de choropleth
     choropleth_confirmed = folium.Choropleth(
@@ -309,9 +351,8 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
         max_bounds = True,
         min_lat = -60)
 
-    # Se convierten a float los bins en los que se va a dividir el número de casos
-    death_bins = [0, 50, 500, 50000, 500000, max(unGroupedData["deaths"])]
-    death_bins = [float(x) for x in death_bins]
+    # Se generan los bins en los que se va a dividir el número de muertos
+    death_bins = generate_bins(max(unGroupedData["deaths"]))
 
     # Creación de choropleth
     choropleth_deaths = folium.Choropleth(
@@ -364,8 +405,7 @@ def process_folium_map_data(dataset, sel_date = "2021-05-22"):
         min_lat = -60)
 
     # Se convierten a float los bins en los que se va a dividir el número de casos
-    recovered_bins = [0, 50, 500, 50000, 500000, 5000000, max(unGroupedData["recovered"])]
-    recovered_bins = [float(x) for x in recovered_bins]
+    recovered_bins = generate_bins(max(unGroupedData["recovered"]))
 
     choropleth_recovered = folium.Choropleth(
         geo_data = geojson_countries,
