@@ -1,10 +1,10 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-from sqlalchemy import create_engine
 from streamlit_folium import folium_static
 from functions import process_folium_map_data, get_DBData
 from datetime import datetime
+import plotly.graph_objects as go
 
 # ================
 # SETTINGS
@@ -93,11 +93,11 @@ st.sidebar.markdown("""
 <hr>
 """, unsafe_allow_html = True)
 
-disable_map = st.sidebar.checkbox("Disable Map", value = True)
+disable_map = st.sidebar.checkbox("Disable Map", value = False)
 st.sidebar.markdown("##### Note: Enable for faster performance")
 
-view_raw_dataset = st.sidebar.checkbox("View Raw Map Data", value = False)
-st.sidebar.markdown("##### Enable expander with raw map data")
+hide_raw_map_data = st.sidebar.checkbox("Hide Raw Map Data", value = False)
+st.sidebar.markdown("##### Hide expander with raw map data")
 
 # ================
 # FOLIUM MAP
@@ -128,7 +128,7 @@ else:
     st.image("streamlit/map.PNG")
 
 # Pestaña expandible para ver el datset raw
-if view_raw_dataset == True:
+if hide_raw_map_data == False:
     with st.expander("Raw Map Data"):
         st.write(dataset[dataset["date"] == analysis_date.strftime('%Y-%m-%d')].reset_index())
 
@@ -210,7 +210,7 @@ with st.container():
     # Pasos:
     # 1. Se agrupan los datos por fecha (Máximo global)
     # 2. Se convierten las fechas en strings a fechas
-    global_confirmed = dataset[["confirmed", "date"]].groupby(by = ["date"]).max().reset_index()
+    global_confirmed = dataset[["confirmed", "date"]].groupby(by = ["date"], dropna=False).sum().reset_index()
     global_confirmed["date"] = pd.to_datetime(global_confirmed["date"])
 
     # Si los datos se desean mostrar de forma semanal
@@ -261,7 +261,7 @@ with st.container():
     data_freq = col2.radio("Data Frequency", ("Weekly", "Daily"), key = "freq_death")
 
     # Se extraen los datos a graficar
-    global_deaths = dataset[["deaths", "date"]].groupby(by = ["date"]).max().reset_index()
+    global_deaths = dataset[["deaths", "date"]].groupby(by = ["date"], dropna=False).sum().reset_index()
     global_deaths["date"] = pd.to_datetime(global_deaths["date"])
 
     # Si los datos se desean mostrar de forma semanal
@@ -401,21 +401,20 @@ st.markdown("""
 <hr>
 """, unsafe_allow_html = True)
 
-country_data = dataset[["confirmed", "deaths", "country_region", "date", "population", "code"]].groupby(by = ["country_region", "date", "code"]).sum().reset_index()
+country_data = dataset[["confirmed", "deaths", "country_region", "date", "population", "code"]].groupby(by = ["country_region", "date", "code"], dropna=False).sum().reset_index()
 
-country_recovered = dataset[["country_region", "recovered"]].groupby(by = ["country_region"]).max().fillna(0).reset_index()
+country_recovered = dataset[["country_region", "recovered"]].groupby(by = ["country_region"], dropna=False).max().fillna(0).reset_index()
 
 country_data = pd.merge(left = country_data, right = country_recovered, on = ["country_region"], how = "left")
 
-top10 = country_data[country_data["date"] == latest_date].sort_values(by = "confirmed", ascending = False).head(10)
+#top10 = country_data[country_data["date"] == latest_date].sort_values(by = "confirmed", ascending = False).head(10)
 
-total_rates = (top10["confirmed"] / top10["population"]) * 100 + \
-              (top10["deaths"] / top10["confirmed"]) * 100 + \
-              (top10["recovered"] / top10["confirmed"]) * 10
+#st.write(country_data)
 
 st.markdown("""
 ### Comparison
-Comparison of the infection rate, death rate and recovery rate of up to 10 countries. By default, the 10 countries with the largest number of confirmed cases are selected.
+Comparison of the infection rate, death rate and recovery rate of up to 10 countries. Bar length is not representative of actual metrics, bar length is weighted to facilitate comparisons among countries.
+By default, the 10 countries with the largest number of confirmed cases are selected.
 #
 """)
 
@@ -423,14 +422,30 @@ with st.container():
 
     col1, col2 = st.columns([6, 1])
 
-    options = col2.multiselect(
-        'Countries to Compare', 
-        country_data["country_region"].unique().tolist(), 
-        top10["country_region"].unique().tolist()
-    )
+    # CONTROL: Paises a comparar
+    countries_comparison = col2.multiselect('Countries to Compare', 
+                                            country_data["country_region"].unique().tolist(), 
+                                            (country_data[country_data["date"] == latest_date]
+                                                .sort_values(by = "confirmed", ascending = False)
+                                                .head(10)["country_region"]
+                                                .unique()
+                                                .tolist())
+                                            )
 
-    import plotly.graph_objects as go
+    # Si se eligen más de 10 países, los últimos agregados se ignoran
+    if len(countries_comparison) > 10:
+        countries_comparison = countries_comparison[0:10]
 
+    # Se obtiene la data más reciente para los países seleccionados
+    top10 = country_data[(country_data["country_region"].isin(countries_comparison)) & (country_data["date"] == latest_date)]
+
+    # Se obtiene un total de ponderación para todas las tasas
+    # (Utilizada para hacer a todas las tasas más comparables)
+    total_rates = (top10["confirmed"] / top10["population"]) * 100 + \
+                  (top10["deaths"] / top10["confirmed"]) * 100 + \
+                  (top10["recovered"] / top10["confirmed"]) * 10
+
+    # Figura
     fig = go.Figure()
     fig.add_trace(
         go.Bar(
@@ -519,6 +534,9 @@ with st.container():
     # Datos de país seleccionado
     selected_country_data = dataset[dataset['country_region'] == selected_country]
 
+    # Dantos de incidencia
+    selected_country_data["incidence"] = (selected_country_data["confirmed"] / selected_country_data["population"]) * 100000
+
     # CONTROL: Muestreo semanal
     if sampling_freq == "Weekly":
         selected_country_data = selected_country_data[selected_country_data["date"].dt.dayofweek == 0]
@@ -533,6 +551,10 @@ with st.container():
         # Procesado de muertes
         selected_country_data["deaths"] = selected_country_data["deaths"].diff().fillna(0)
         selected_country_data["death_perc_change"] = selected_country_data["deaths"].pct_change().replace([np.inf, -np.inf], np.nan).fillna(0) * 100
+
+        # Procesado de incidencia
+        selected_country_data["incidence"] = selected_country_data["incidence"].diff().fillna(0)
+        selected_country_data["incidence_perc_change"] = selected_country_data["incidence"].pct_change().replace([np.inf, -np.inf], np.nan).fillna(0) * 100
 
         # Se elimina la primera y última fecha del cambio
         earliest_date = selected_country_data["date"].min()
@@ -559,27 +581,48 @@ with st.container():
     col2.metric("Population", f"{selected_country_data['population'].max() / 1000000:.2f}M")
     col2.metric("Case-Fatality Ratio", f"{(selected_country_data['deaths'].max() / selected_country_data['confirmed'].max()) * 100:.1f}%")
     col2.metric("Incidence (Cases per 100k people)", f"{(selected_country_data['confirmed'].max() / selected_country_data['population'].max()) * 100000:.0f} cases")
+    col2.metric("Recovered", f"{selected_country_data['recovered'].max() / 1000:.1f}k people")
 
-    # Creación de gráfica de plotly
+    col4.markdown("""
+    # 
+    # 
+    """)
+
+    # Gráfica plotly: Confirmados
     fig = px.bar(
         selected_country_data, 
         x ="date", 
         y = "confirmed",
-        labels = {"confirmed": "Confirmed Cases Difference", "date": "Date"} if (sequence_type == "Difference") else {"confirmed": "Confirmed Cases", "date": "Date"},
-        hover_data = {"% Change": (':.1f%', selected_country_data["conf_perc_change"])} if (sequence_type == "Difference") else {}
+        labels = {"confirmed": "Confirmed Cases Difference", "date": ""} if (sequence_type == "Difference") else {"confirmed": "Confirmed Cases", "date": ""},
+        hover_data = {"% Change": (':.1f%', selected_country_data["conf_perc_change"])} if (sequence_type == "Difference") else {},
+        height = 250
     )
     fig.update_traces(marker_line_width = 0, marker_color = "#9066AD", selector=dict(type="bar"))
-    fig.update_layout(margin=dict(l=0, r=0, t=0, b=0))
+    fig.update_layout(margin=dict(l=0, r=0, t=0, b=0), font = dict(size=15))
     col4.plotly_chart(fig, use_container_width = True)
 
-    # Creación de gráfica de plotly
+    # Gráfica plotly: Muertes
     fig = px.bar(
         selected_country_data, 
         x ="date", 
         y = "deaths",
-        labels = {"deaths": "Death Differences", "date": "Date"} if (sequence_type == "Difference") else {"deaths": "Deaths", "date": "Date"},
-        hover_data = {"% Change": (':.1f%', selected_country_data["death_perc_change"])} if (sequence_type == "Difference") else {}
+        labels = {"deaths": "Death Differences", "date": ""} if (sequence_type == "Difference") else {"deaths": "Deaths", "date": ""},
+        hover_data = {"% Change": (':.1f%', selected_country_data["death_perc_change"])} if (sequence_type == "Difference") else {},
+        height = 250
     )
     fig.update_traces(marker_line_width = 0, marker_color = "#DF5941", selector=dict(type="bar"))
-    fig.update_layout(margin=dict(l=0, r=0, t=0, b=0))
+    fig.update_layout(margin=dict(l=0, r=0, t=0, b=0), font = dict(size=15))
+    col4.plotly_chart(fig, use_container_width = True)
+
+    # Gráfica plotly: Incidencia
+    fig = px.bar(
+        selected_country_data, 
+        x ="date", 
+        y = "incidence",
+        labels = {"incidence": "Incidence Differences", "date": "Date"} if (sequence_type == "Difference") else {"incidence": "Incidence", "date": "Date"},
+        hover_data = {"% Change": (':.1f%', selected_country_data["incidence_perc_change"])} if (sequence_type == "Difference") else {},
+        height = 250
+    )
+    fig.update_traces(marker_line_width = 0, marker_color = "#FFB100", selector=dict(type="bar"))
+    fig.update_layout(margin=dict(l=0, r=0, t=0, b=0), font = dict(size=15))
     col4.plotly_chart(fig, use_container_width = True)
