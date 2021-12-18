@@ -103,11 +103,28 @@ After this, the dashboard uses this information inside four distinct sections:
 - Map: Uses the data and the currently selected date to display 2 different types of maps: Choropleth maps and markers, both making use of the *Folium* package (a wrapper for *Leaflet.js*). 
   - **Choropleth maps**, or a colored maps, are maps that color a country in a stronger shade of color if they have a higher metric associated with it. Three variations are available: One for confirmed cases (shades of purple), one for deaths (shades of red) and one for recovered cases (shades of green). These maps require a specific type of JSON file, called GeoJSON, in order to load the country borders. Two GeoJSONs are provided: One in high resolution (`countries.geojson`), and one in low resolution (`countries-min.json`). Both can be used by altering line 249 of `Dashboard/streamlit/functions.py`, however, the high resolution borders lead to a pretty sharp increase in loading times (up to 30 seconds for each map).
   
+    ![choropleth](Media/choropleth.PNG)
 
-  - **Markers** consist of bubbles that grow according to the number of confirmed cases in a region. Due to the GeoJSON data not containing geographic information for states and provinces, markers or bubbles are used to display data for areas smaller than a country. 
+  - **Markers** consist of bubbles that grow according to the number of confirmed cases in a region. Due to the GeoJSON data not containing geographic information for states and provinces, markers or bubbles are used to display data for areas smaller than a country.
+
+    ![markers](Media/bubbles.PNG) 
 
 - Global Situation: The data is summarized in its entirety, by grouping the data only by date. This removes distinctions between countries and states, leading to a more global view of the data. Simple metrics are presented, alongside the progression of the number of cases and deaths. The number of recovered people was omitted as many countries in the base CSV seemed to simply lack data for the last couple of months (reporting a 0 after previously reporting more than 10k recovered people). Due to this, the total number of recovered people was corrected to be the max value for each country, and then was added to get the total. Sequential data for confirmed cases and deaths can be sampled weekly or daily, and we can observe the difference or the cumulative progression.
 
+  ![global](Media/global-situation.PNG)
+
 - Continent Situation: Similar to the sequences in the previous section, this section gives the user the ability to visualize the progression of confirmed cases, deaths and incidence of cases (confirmed cases divided by the total population) but now broken down into continents. This way the user can see which continents have contributed more to increases in the total number of infected people. A bar chart is also provided in order to summarize the most recent statistics.
 
-- Country Situation: The user can go even further and visualize all the previous data for a specific country, using the same options for difference and sampling frequency. Aside from this, a country comparison is presented. The user can compare the infection rate, death rate and incidence rate of up to 10 different countries. The colored bars are not representative of actual metrics, but they are all weighted in order 
+  ![continent](Media/continent-situation.PNG)
+
+- Country Situation: The user can go even further and visualize all the previous data for a specific country, using the same options for difference and sampling frequency. An [API](https://flagpedia.net/download/api) is used in order to retrieve the flag of each selected country.
+
+  ![individual](Media/individual.PNG)
+
+  Aside from this, a country comparison is presented. The user can compare the infection rate, death rate and incidence rate of up to 10 different countries. The colored bars are not representative of actual metrics, but they are all weighted in order make comparisons easier. To compare in a more straight forward way, each bar has its rate value printed on its center.
+
+  ![comparison](Media/comparison.PNG)
+
+**NOTES**
+
+- All plots are generated using the package Plotly, except for the map, that uses Folium.
